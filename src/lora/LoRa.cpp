@@ -33,21 +33,12 @@
 
 // modes
 #define MODE_LONG_RANGE_MODE     0x80
-#define MODE_HF			 0x08
+#define MODE_HF			 0x08  // Set to 0x0 for LF mode
 #define MODE_SLEEP               0x00
 #define MODE_STDBY               0x01
 #define MODE_TX                  0x03
 #define MODE_RX_CONTINUOUS       0x05
 #define MODE_RX_SINGLE           0x06
-
-// PA config
-//#define PA_BOOST                 0x80
-//#define RFO                      0x70
-// IRQ masks
-#define IRQ_TX_DONE_MASK           0x08
-#define IRQ_PAYLOAD_CRC_ERROR_MASK 0x20
-#define IRQ_RX_DONE_MASK           0x40
-
 
 #define MAX_PKT_LENGTH           255
 
@@ -57,7 +48,8 @@ LoRaClass::LoRaClass() :
   _frequency(0),
   _packetIndex(0),
   _implicitHeaderMode(0),
-  _onReceive(NULL)
+  _onReceive(NULL) ,
+  _once(0)
 {
   // overide Stream timeout value
   setTimeout(0);
@@ -136,7 +128,7 @@ int LoRaClass::beginPacket(int implicitHeader)
 int LoRaClass::endPacket(bool async)
 {
   // put in TX mode
-  writeRegister(MODE_HF | REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_TX);
+  writeRegister(MODE_HF | REG_OP_MODE, MODE_HF | MODE_LONG_RANGE_MODE | MODE_TX);
 
   if (async) {
     // grace time is required for the radio
@@ -187,7 +179,7 @@ int LoRaClass::parsePacket(int size)
     // reset FIFO address
     writeRegister(REG_FIFO_ADDR_PTR, 0);
     // put in single RX mode
-    writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_RX_SINGLE);
+    writeRegister(REG_OP_MODE, MODE_HF | MODE_LONG_RANGE_MODE | MODE_RX_SINGLE);
   }
   return packetLength;
 }
