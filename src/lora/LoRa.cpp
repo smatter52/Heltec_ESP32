@@ -7,7 +7,7 @@
 #define REG_FRF_MID              0x07
 #define REG_FRF_LSB              0x08
 #define REG_PA_CONFIG            0x09
-#define REG_LR_OCP				 0X0b
+#define REG_LR_OCP		 0X0b
 #define REG_LNA                  0x0c
 #define REG_FIFO_ADDR_PTR        0x0d
 #define REG_FIFO_TX_BASE_ADDR    0x0e
@@ -29,10 +29,11 @@
 #define REG_SYNC_WORD            0x39
 #define REG_DIO_MAPPING_1        0x40
 #define REG_VERSION              0x42
-#define REG_PaDac				 0x4d//add REG_PaDac
+#define REG_PaDac		 0x4d
 
 // modes
 #define MODE_LONG_RANGE_MODE     0x80
+#define MODE_HF			 0x08
 #define MODE_SLEEP               0x00
 #define MODE_STDBY               0x01
 #define MODE_TX                  0x03
@@ -104,7 +105,7 @@ int LoRaClass::begin(long frequency,bool PABOOST)
   //setCodingRate4(5);
   setSyncWord(0x34);
   disableCrc();
-  crc();
+  // crc();
   idle();
   return 1;
 }
@@ -135,7 +136,7 @@ int LoRaClass::beginPacket(int implicitHeader)
 int LoRaClass::endPacket(bool async)
 {
   // put in TX mode
-  writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_TX);
+  writeRegister(MODE_HF | REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_TX);
 
   if (async) {
     // grace time is required for the radio
@@ -143,7 +144,7 @@ int LoRaClass::endPacket(bool async)
   } else {
     // wait for TX done
     while ((readRegister(REG_IRQ_FLAGS) & IRQ_TX_DONE_MASK) == 0) {
-      yield();
+      delay(5);
     }
     // clear IRQ's
     writeRegister(REG_IRQ_FLAGS, IRQ_TX_DONE_MASK);
@@ -181,7 +182,7 @@ int LoRaClass::parsePacket(int size)
     // put in standby mode
     idle();
   }
-  else if (readRegister(REG_OP_MODE) != (MODE_LONG_RANGE_MODE | MODE_RX_SINGLE)) {
+  else if (readRegister(REG_OP_MODE) != (MODE_HF | MODE_LONG_RANGE_MODE | MODE_RX_SINGLE)) {
     // not currently in RX mode
     // reset FIFO address
     writeRegister(REG_FIFO_ADDR_PTR, 0);
@@ -300,17 +301,17 @@ void LoRaClass::receive(int size)
     explicitHeaderMode();
   }
 
-  writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_RX_CONTINUOUS);
+  writeRegister(REG_OP_MODE, MODE_HF |  MODE_LONG_RANGE_MODE | MODE_RX_CONTINUOUS);
 }
 
 void LoRaClass::idle()
 {
-  writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_STDBY);
+  writeRegister(REG_OP_MODE, MODE_HF | MODE_LONG_RANGE_MODE | MODE_STDBY);
 }
 
 void LoRaClass::sleep()
 {
-  writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_SLEEP);
+  writeRegister(REG_OP_MODE, MODE_HF | MODE_LONG_RANGE_MODE | MODE_SLEEP);
 }
 
 void LoRaClass::setTxPower(int8_t power, int8_t outputPin)
@@ -547,5 +548,46 @@ void LoRaClass::onDio0Rise()
 {
   LoRa.handleDio0Rise();
 }
+
+// Receive a packet without blocking. Explicit mode only
+int LoRaClass::RxPak_nb()
+{
+  int packetLength = 0;
+  int irqFlags ;
+
+ // clear IRQ's once
+  if (_once == 0)
+   { _once = 1 ;
+     explicitHeaderMode();
+     LoRa.writeRegister(REG_IRQ_FLAGS, 0xff);
+      // reset FIFO address
+     writeRegister(REG_FIFO_ADDR_PTR, 0);
+      // put in continuous RX mode
+     writeRegister(REG_OP_MODE, MODE_HF | MODE_LONG_RANGE_MODE | MODE_RX_CONTINUOUS);
+   }
+  if (((irqFlags = readRegister(REG_IRQ_FLAGS)) &
+      (IRQ_RX_DONE_MASK | IRQ_VALID_HEADER_MASK)) ==
+      (IRQ_RX_DONE_MASK | IRQ_VALID_HEADER_MASK))
+   {
+ // received a packet
+    _packetIndex = 0;
+    packetLength = readRegister(REG_RX_NB_BYTES);
+    // set FIFO address to current RX address
+    writeRegister(REG_FIFO_ADDR_PTR, readRegister(REG_FIFO_RX_CURRENT_ADDR));
+    idle();
+    _once = 0 ;
+   }
+  return packetLength;
+}
+
+void LoRaClass::cancelRx_nb()
+{
+  if (_once != 0)
+   {
+     _once = 0 ;
+     idle() ;
+   }
+}
+
 
 LoRaClass LoRa;
