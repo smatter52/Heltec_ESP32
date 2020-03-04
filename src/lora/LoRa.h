@@ -11,6 +11,14 @@
 #define PA_OUTPUT_PA_BOOST_PIN  1
 #define PA_OUTPUT_RFO_PIN       0
 
+// IRQ masks
+#define IRQ_TX_DONE_MASK           0x08
+#define IRQ_PAYLOAD_CRC_ERROR_MASK 0x20
+#define IRQ_RX_DONE_MASK           0x40
+#define IRQ_CD_DET_MASK            0x1
+#define IRQ_CD_DONE_MASK           0x4
+#define IRQ_VALID_HEADER_MASK      0x10
+
 /*!
  * RegPaConfig
  */
@@ -77,11 +85,13 @@ public:
   void setSyncWord(int sw);
   void enableCrc();
   void disableCrc();
+  int  RxPak_nb() ;
+  void cancelRx_nb() ;
 
   // deprecated
   void crc() { enableCrc(); }
   void noCrc() { disableCrc(); }
-
+  
   byte random();
 
   void setPins(int ss = LORA_DEFAULT_SS_PIN, int reset = LORA_DEFAULT_RESET_PIN, int dio0 = LORA_DEFAULT_DIO0_PIN);
@@ -110,6 +120,7 @@ private:
   int _packetIndex;
   int _implicitHeaderMode;
   void (*_onReceive)(int);
+  int _once ;
 };
 
 extern LoRaClass LoRa;
