@@ -128,7 +128,7 @@ int LoRaClass::beginPacket(int implicitHeader)
 int LoRaClass::endPacket(bool async)
 {
   // put in TX mode
-  writeRegister(MODE_HF | REG_OP_MODE, MODE_HF | MODE_LONG_RANGE_MODE | MODE_TX);
+  writeRegister(REG_OP_MODE, MODE_HF | MODE_LONG_RANGE_MODE | MODE_TX);
 
   if (async) {
     // grace time is required for the radio
