@@ -153,6 +153,11 @@ A detailed step by step instructions to execute some examples available here:
 ### 原理图
 [https://github.com/Heltec-Aaron-Lee/WiFi_Kit_series/tree/master/SchematicDiagram](https://github.com/Heltec-Aaron-Lee/WiFi_Kit_series/tree/master/SchematicDiagram)
 
+Added functions for LoRaClass:
+RxPak_nb() : Non blocking function to wait for a packet
+cancelRx_nd() : Cancel the above
+Addional flags: MODE_HF : Sets 1276 to high freqency (550mHz  - 915Mhz)
+
 
 
 
